@@ -14,10 +14,10 @@
     });
     const chalk = (await import('chalk')).default;
     
-    const _0x3e09d7 = _0x1c864d => new Promise(_0x5da23c => _0x41d8de.question(_0x1c864d, _0x5da23c));
+    const question = (text) => new Promise(resolve => _0x41d8de.question(text, resolve));
     
-    // ========== KRIX BANNER ==========
-    const _0x1e9ef5 = () => {
+    // KRIX BANNER
+    const banner = () => {
       console.clear();
       console.log(chalk.cyan(`
 ╔══════════════════════════════════════════════════════════════╗
@@ -38,8 +38,8 @@
 ║                                                              ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  🎯 OWNER    : ${chalk.magenta('KRIX GOD')}                                        ║
-║  🔥 TOOL     : ${chalk.green('ULTIMATE WHATSAPP BOMBER')}                              ║
-║  💀 VERSION  : ${chalk.yellow('7.0.0 - FULL WORKING')}                                 ║
+║  🔥 TOOL     : ${chalk.green('WHATSAPP BOMBER')}                                   ║
+║  💀 VERSION  : ${chalk.yellow('7.0 - PAIRING CODE')}                               ║
 ║  ⚡ STATUS   : ${chalk.cyan('READY 🔥')}                                             ║
 ╚══════════════════════════════════════════════════════════════╝
       `));
@@ -49,80 +49,100 @@
     let groups = [];
     let messages = [];
     let delay = 2;
-    let senderName = "";
+    let senderName = "🔥 KRIX 🔥";
     let totalSent = 0;
     
-    // ========== MAIN FUNCTION ==========
+    // ========== SIRF PAIRING CODE WALA CONNECTION ==========
     const start = async () => {
-      // Initialize auth state - FIXED: yeh variable pehle missing tha
       const { state, saveCreds } = await _0x43d940("./auth_info");
       
       const sock = _0x4f98c4({
         logger: _0x3381b6({ level: "silent" }),
         auth: state,
-        browser: ['KRIX BOMBER', 'Chrome', '120.0.0.0'],
-        printQRInTerminal: true
+        browser: ['KRIX BOMBER', 'Chrome', '120.0.0.0']
       });
       
-      // Handle connection
       sock.ev.on('connection.update', async (update) => {
-        const { connection, qr } = update;
-        
-        if (qr) {
-          console.log(chalk.yellow('\n[📱] SCAN QR CODE:\n'));
-          console.log(chalk.white(qr));
-        }
+        const { connection, lastDisconnect } = update;
         
         if (connection === 'open') {
-          console.log(chalk.green('\n[✅] WHATSAPP CONNECTED!\n'));
+          banner();
+          console.log(chalk.green('\n[✅] WHATSAPP CONNECTED SUCCESSFULLY!\n'));
           await menu(sock);
         }
         
         if (connection === 'close') {
-          console.log(chalk.yellow('\n[🔄] RECONNECTING...\n'));
-          setTimeout(start, 5000);
+          const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== _0x13d9dd.loggedOut;
+          if (shouldReconnect) {
+            console.log(chalk.yellow('\n[🔄] RECONNECTING IN 5 SECONDS...\n'));
+            setTimeout(start, 5000);
+          } else {
+            console.log(chalk.red('\n[❌] LOGGED OUT. DELETE auth_info FOLDER AND RESTART.\n'));
+          }
         }
       });
       
       sock.ev.on('creds.update', saveCreds);
       
-      // Check if already authenticated
+      // SIRF PAIRING CODE - NO QR CODE
       if (!state.creds.registered) {
-        _0x1e9ef5();
-        console.log(chalk.yellow('\n[🔐] NEW SESSION - SCAN QR CODE ABOVE\n'));
+        banner();
+        console.log(chalk.yellow('\n[🔐] PAIRING CODE REQUIRED\n'));
+        const phoneNumber = await question(chalk.green('[+] ENTER YOUR NUMBER (with country code, e.g., 919876543210): '));
+        
+        const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+        console.log(chalk.yellow(`\n[📱] REQUESTING PAIRING CODE FOR: ${cleanNumber}\n`));
+        
+        const code = await sock.requestPairingCode(cleanNumber);
+        
+        console.log(chalk.cyan(`
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║         🔐 YOUR WHATSAPP PAIRING CODE 🔐                     ║
+║                                                              ║
+║              ${chalk.bgWhite.black(`  ${code}  `)}                    ║
+║                                                              ║
+║   Open WhatsApp → Settings → Linked Devices                  ║
+║   → Link with phone number → Enter this code                 ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+        `));
+        
+        console.log(chalk.dim('\n[⚡] WAITING FOR CONNECTION...\n'));
       } else {
-        console.log(chalk.green('\n[✅] SESSION LOADED!\n'));
+        banner();
+        console.log(chalk.green('\n[✅] SESSION LOADED! CONNECTING...\n'));
       }
     };
     
-    // ========== MENU SYSTEM ==========
+    // ========== MENU ==========
     async function menu(sock) {
       while (true) {
-        _0x1e9ef5();
+        banner();
         console.log(chalk.cyan(`
 ╔════════════════════════════════════════════════════════╗
-║  📋 ${chalk.white('MAIN MENU')}                                            ║
+║  📋 ${chalk.white('BOMBER MENU')}                                          ║
 ╠════════════════════════════════════════════════════════╣
 ║  ${chalk.green('[1]')} 🎯 ADD TARGET NUMBERS                               ║
 ║  ${chalk.green('[2]')} 👥 ADD GROUP TARGETS                                ║
 ║  ${chalk.green('[3]')} 📝 LOAD MESSAGE FILE                                ║
-║  ${chalk.green('[4]')} ⚙️  SETTINGS (Delay/Sender Name)                    ║
+║  ${chalk.green('[4]')} ⚙️  SETTINGS (Delay/Sender)                         ║
 ║  ${chalk.green('[5]')} 📊 SHOW STATUS                                      ║
 ║  ${chalk.green('[6]')} 🚀 START BOMBING                                    ║
 ║  ${chalk.green('[7]')} ❌ EXIT                                             ║
 ╚════════════════════════════════════════════════════════╝
         `));
         
-        const choice = await _0x3e09d7(chalk.cyan('[?] SELECT OPTION: '));
+        const choice = await question(chalk.cyan('[?] SELECT OPTION: '));
         
         switch(choice) {
           case '1':
-            const numCount = await _0x3e09d7(chalk.cyan('[+] HOW MANY NUMBERS: '));
-            for (let i = 0; i < numCount; i++) {
-              const num = await _0x3e09d7(chalk.green(`[+] NUMBER ${i+1} (e.g., 91XXXXXXXXXX): `));
+            const numCount = await question(chalk.cyan('[+] HOW MANY NUMBERS: '));
+            for (let i = 0; i < parseInt(numCount); i++) {
+              const num = await question(chalk.green(`[+] NUMBER ${i+1}: `));
               targets.push(num);
             }
-            console.log(chalk.green(`\n[✅] ${targets.length} NUMBERS ADDED\n`));
+            console.log(chalk.green(`\n[✅] ${targets.length} TARGETS ADDED\n`));
             await _0x2bedd9(1500);
             break;
             
@@ -135,9 +155,9 @@
                 console.log(chalk.cyan(`  ${idx+1}. ${groupList[id].subject}`));
                 console.log(chalk.dim(`     ID: ${id}\n`));
               });
-              const grpCount = await _0x3e09d7(chalk.cyan('[+] HOW MANY GROUPS TO TARGET: '));
-              for (let i = 0; i < grpCount; i++) {
-                const gid = await _0x3e09d7(chalk.green(`[+] GROUP ID ${i+1}: `));
+              const grpCount = await question(chalk.cyan('[+] HOW MANY GROUPS: '));
+              for (let i = 0; i < parseInt(grpCount); i++) {
+                const gid = await question(chalk.green(`[+] GROUP ID ${i+1}: `));
                 groups.push(gid);
               }
               console.log(chalk.green(`\n[✅] ${groups.length} GROUPS ADDED\n`));
@@ -148,10 +168,10 @@
             break;
             
           case '3':
-            const msgPath = await _0x3e09d7(chalk.cyan('[📝] MESSAGE FILE PATH: '));
+            const msgPath = await question(chalk.cyan('[📝] MESSAGE FILE PATH: '));
             try {
               const content = _0x5f1924.readFileSync(msgPath, "utf-8");
-              messages = content.split("\n").filter(line => line.trim());
+              messages = content.split("\n").filter(l => l.trim());
               console.log(chalk.green(`\n[✅] LOADED ${messages.length} MESSAGES\n`));
             } catch(e) {
               console.log(chalk.red(`\n[❌] FILE ERROR: ${e.message}\n`));
@@ -161,83 +181,75 @@
             
           case '4':
             console.log(chalk.cyan('\n⚙️ CURRENT SETTINGS:\n'));
-            console.log(chalk.dim(`  DELAY: ${delay} seconds`));
-            console.log(chalk.dim(`  SENDER NAME: ${senderName || 'NOT SET'}`));
-            const newDelay = await _0x3e09d7(chalk.cyan('[+] NEW DELAY (seconds): '));
-            if (newDelay && !isNaN(newDelay)) delay = parseInt(newDelay);
-            const newName = await _0x3e09d7(chalk.cyan('[+] SENDER NAME: '));
+            console.log(chalk.dim(`  DELAY: ${delay} sec`));
+            console.log(chalk.dim(`  SENDER: ${senderName}`));
+            const newDelay = await question(chalk.cyan('[+] NEW DELAY (seconds): '));
+            if (newDelay && !isNaN(parseInt(newDelay))) delay = parseInt(newDelay);
+            const newName = await question(chalk.cyan('[+] SENDER NAME: '));
             if (newName) senderName = newName;
-            console.log(chalk.green('\n[✅] SETTINGS UPDATED\n'));
+            console.log(chalk.green('\n[✅] UPDATED\n'));
             await _0x2bedd9(1500);
             break;
             
           case '5':
-            console.log(chalk.cyan('\n📊 CURRENT STATUS:\n'));
-            console.log(chalk.white(`  TARGET NUMBERS: ${targets.length}`));
-            console.log(chalk.white(`  TARGET GROUPS: ${groups.length}`));
-            console.log(chalk.white(`  MESSAGES LOADED: ${messages.length}`));
+            console.log(chalk.cyan('\n📊 STATUS:\n'));
+            console.log(chalk.white(`  NUMBERS: ${targets.length}`));
+            console.log(chalk.white(`  GROUPS: ${groups.length}`));
+            console.log(chalk.white(`  MESSAGES: ${messages.length}`));
             console.log(chalk.white(`  DELAY: ${delay}s`));
-            console.log(chalk.white(`  SENDER: ${senderName || 'N/A'}`));
-            console.log(chalk.white(`  TOTAL SENT: ${totalSent}`));
-            console.log(chalk.dim('\n[⚡] PRESS ENTER TO CONTINUE...'));
-            await _0x3e09d7('');
+            console.log(chalk.white(`  SENDER: ${senderName}`));
+            console.log(chalk.white(`  SENT: ${totalSent}`));
+            await question(chalk.dim('\n[⚡] PRESS ENTER...'));
             break;
             
           case '6':
             if (targets.length === 0 && groups.length === 0) {
-              console.log(chalk.red('\n[❌] NO TARGETS! ADD NUMBERS OR GROUPS FIRST.\n'));
+              console.log(chalk.red('\n[❌] NO TARGETS!\n'));
               await _0x2bedd9(1500);
               break;
             }
             if (messages.length === 0) {
-              console.log(chalk.red('\n[❌] NO MESSAGES! LOAD MESSAGE FILE FIRST.\n'));
+              console.log(chalk.red('\n[❌] NO MESSAGES!\n'));
               await _0x2bedd9(1500);
               break;
             }
-            await startBombing(sock);
+            await bombing(sock);
             break;
             
           case '7':
-            console.log(chalk.red('\n[❌] EXITING...\n'));
+            console.log(chalk.red('\n[❌] BYE!\n'));
             process.exit(0);
-            
-          default:
-            console.log(chalk.red('\n[❌] INVALID OPTION!\n'));
-            await _0x2bedd9(1000);
         }
       }
     }
     
-    // ========== BOMBING FUNCTION ==========
-    async function startBombing(sock) {
-      _0x1e9ef5();
-      console.log(chalk.yellow('\n[🔥] STARTING BOMBING...\n'));
+    // ========== BOMBING ==========
+    async function bombing(sock) {
+      banner();
+      console.log(chalk.yellow('\n[🔥] BOMBING STARTED!\n'));
       await _0x2bedd9(2000);
       
       while (true) {
         for (let i = 0; i < messages.length; i++) {
-          const msg = messages[i];
-          const fullMsg = `${senderName ? senderName + ' ' : ''}${msg}`;
+          const msg = `${senderName} ${messages[i]}`;
           
-          // Send to numbers
           for (const num of targets) {
             try {
-              await sock.sendMessage(num + "@c.us", { text: fullMsg });
+              await sock.sendMessage(num + "@c.us", { text: msg });
               totalSent++;
-              console.log(chalk.green(`[✅] SENT TO: ${num}`));
+              console.log(chalk.green(`[✅] TO: ${num}`));
             } catch(e) {
-              console.log(chalk.red(`[❌] FAILED: ${num} - ${e.message}`));
+              console.log(chalk.red(`[❌] FAILED: ${num}`));
             }
           }
           
-          // Send to groups
           for (const grp of groups) {
             try {
-              await sock.sendMessage(grp + "@g.us", { text: fullMsg });
+              await sock.sendMessage(grp + "@g.us", { text: msg });
               totalSent++;
-              console.log(chalk.green(`[✅] SENT TO GROUP: ${grp.substring(0,15)}...`));
+              console.log(chalk.green(`[✅] GROUP: ${grp.substring(0,10)}...`));
             } catch(e) {
-              console.log(chalk.red(`[❌] FAILED GROUP: ${e.message}`));
+              console.log(chalk.red(`[❌] GROUP FAILED`));
             }
           }
           
@@ -246,25 +258,23 @@
 ║  💀 ${chalk.red('KRIX BOMBER')} 💀                                         ║
 ║  📨 MSG ${i+1}/${messages.length}                                       ║
 ║  💬 TOTAL SENT: ${totalSent}                                            ║
-║  ⏱️  NEXT IN: ${delay}s                                               ║
 ╚════════════════════════════════════════════════════╝
           `));
           
           await _0x2bedd9(delay * 1000);
         }
-        
-        console.log(chalk.green('\n[🔄] CYCLE COMPLETE! RESTARTING...\n'));
+        console.log(chalk.green('\n[🔄] CYCLE DONE! RESTARTING...\n'));
         await _0x2bedd9(3000);
       }
     }
     
-    // Start the application
-    console.log(chalk.green('\n[✨] KRIX BOMBER v7.0 STARTING...\n'));
+    // RUN
+    console.log(chalk.green('\n[✨] STARTING KRIX BOMBER...\n'));
     await _0x2bedd9(2000);
     start();
     
   } catch (error) {
-    console.error('\n[💀] FATAL ERROR: ' + error + '\n');
-    console.log('Run: npm install @whiskeysockets/baileys chalk pino\n');
+    console.error(chalk.red('\n[💀] ERROR: ' + error + '\n'));
+    console.log(chalk.yellow('Run: npm install @whiskeysockets/baileys chalk pino\n'));
   }
 })();
