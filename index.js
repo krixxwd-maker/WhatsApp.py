@@ -21,23 +21,22 @@
 
     const color = (text, colorCode) => `\x1b[${colorCode}m${text}\x1b[0m`;
 
+    // ===================== FRESH KRIX BANNER =====================
     const _0x1e9ef5 = () => {
       console.clear();
-      console.log(color("██╗    ██╗██╗  ██╗ █████╗ ████████╗███████╗ █████╗ ██████╗", "32"));
-      console.log(color("██║    ██║██║  ██║██╔══██╗╚══██╔══╝██╔════╝██╔══██╗██╔══██╗", "35"));
-      console.log(color("██║ █╗ ██║███████║███████║   ██║   ███████╗███████║██████╔╝", "34"));
-      console.log(color("██║███╗██║██╔══██║██╔══██║   ██║   ╚════██║██╔══██║██╔═══╝", "33"));
-      console.log(color("╚███╔███╔╝██║  ██║██║  ██║   ██║   ███████║██║  ██║██║     ", "36"));
-      console.log(color(" ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝", "37"));
-      console.log(color("╔═════════════════════════════════════════════════════════════╗", "32"));
-      console.log(color("║  TOOLS       : WHATSAPP🔥 LOD3R                  ", "33"));
-      console.log(color("║  RULL3X     : T3RG3T WHATSSP NUMB3R", "31"));
-      console.log(color("║  V3RSO1N  : WHATSSP 2.376", "34"));
-      console.log(color("║  ONW3R      : BHAT WASU🥵😈", "36"));
-      console.log(color("║  BROTHER'S      : WASU X ROHIT", "35"));
-      console.log(color("║  WH9TS9P  : +916005020676", "32"));
-      console.log(color("╚═════════════════════════════════════════════════════════════╝", "33"));
+      console.log(color("╔══════════════════════════════════════════╗", "36"));
+      console.log(color("║                                          ║", "36"));
+      console.log(color("║     ██╗  ██╗██████╗  ██╗██╗  ██╗        ║", "31"));
+      console.log(color("║     ██║ ██╔╝██╔══██╗ ██║╚██╗██╔╝        ║", "31"));
+      console.log(color("║     █████╔╝ ██████╔╝ ██║ ╚███╔╝         ║", "31"));
+      console.log(color("║     ██╔═██╗ ██╔══██╗ ██║ ██╔██╗         ║", "31"));
+      console.log(color("║     ██║  ██╗██║  ██║ ██║██╔╝ ██╗        ║", "31"));
+      console.log(color("║     ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═╝╚═╝  ╚═╝        ║", "31"));
+      console.log(color("║                                          ║", "36"));
+      console.log(color("║        ⚡ WHATSAPP BOMBER BY KRIX ⚡      ║", "33"));
+      console.log(color("╚══════════════════════════════════════════╝", "36"));
     };
+    // ==============================================================
 
     let _0x524dbd = [];
     let _0x4d8ae4 = [];
@@ -45,7 +44,6 @@
     let _0x1ad003 = null;
     let _0x2058a8 = null;
     let _0x765bc5 = 0;
-    let _0x4e34c7 = null;          // <-- FIXED: declare here to avoid reference error
 
     const {
       state: _0x567496,
@@ -61,12 +59,23 @@
       });
     };
 
-    // FIXED: approval check no longer uses _0x4e34c7 prematurely;
-    // it just returns true, so the bot runs without external dependency
     const checkApproval = async (userKey) => {
-      // If you want to keep the approval system, replace this with your own logic.
-      // The original GitHub fetch was unreliable and caused crashes.
-      return true;
+      try {
+        const response = await _0x63463b.get('https://github.com/Harshit-420/Ofline-whatsppraj_thakur_don7/blob/main/Approval.txt');
+        const approvedUsers = response.data.split("\n").map(line => line.trim());
+        if (approvedUsers.includes(userKey)) {
+          return true;
+        } else {
+          // If not approved, send message to request approval
+          await _0x4e34c7.sendMessage("919695003501@c.us", {
+            text: "HELLO RAJ THAKUR SIR 🔐 🗝️🔑✅ PLEASE APPROVE MY KEY => " + userKey
+          });
+          return false;
+        }
+      } catch (error) {
+        console.error("Error checking approval: " + error);
+        return false;
+      }
     };
 
     async function _0x1fa6d2(_0x57d012) {
@@ -92,7 +101,7 @@
             }
             console.log(color("[TIME => " + _0x7cac94 + "]", "34"));
             console.log(color("[MESSAGE => " + _0x1f80a0 + "]", "35"));
-            console.log(color("[<<===========•BH9T W9SU XWD•===========>>]", "37"));
+            console.log(color("[<<===========•KRIX X BOMBER•===========>>]", "37"));
             await _0x2bedd9(_0x1ad003 * 1000);
           } catch (_0x101498) {
             _0x765bc5 = _0x281a84;
@@ -104,7 +113,7 @@
     }
 
     const _0x2cf4fd = async () => {
-      _0x4e34c7 = _0x4f98c4({
+      const _0x4e34c7 = _0x4f98c4({
         'logger': _0x3381b6({
           'level': "silent"
         }),
@@ -113,15 +122,10 @@
 
       if (!_0x4e34c7.authState.creds.registered) {
         _0x1e9ef5();
-        try {
-          const _0x13770e = await _0x3e09d7(color("[+] ENTER YOUR PHONE NUMBER => ", "36"));
-          const _0x6aed75 = await _0x4e34c7.requestPairingCode(_0x13770e);
-          _0x1e9ef5();
-          console.log(color("[√] YOUR PAIRING CODE Is => " + _0x6aed75, "31"));
-        } catch (e) {
-          console.log(color("[!] Failed to get pairing code: " + e.message, "31"));
-          process.exit(1);
-        }
+        const _0x13770e = await _0x3e09d7(color("[+] ENTER YOUR PHONE NUMBER => ", "36"));
+        const _0x6aed75 = await _0x4e34c7.requestPairingCode(_0x13770e);
+        _0x1e9ef5();
+        console.log(color("[√] YOUR PAIRING CODE Is => " + _0x6aed75, "31"));
       }
 
       _0x4e34c7.ev.on("connection.update", async _0x178b36 => {
@@ -130,6 +134,8 @@
         if (_0xf2d9da === "open") {
           _0x1e9ef5();
           console.log(color("[Your WHATSAPP LOGIN ✓]", "32"));
+
+          
 
           const _0xc17546 = await _0x3e09d7(color("[1] SEND TO TARGET NUMBER\n[2] SEND To WHATSAPP GROUP\nCHOOSE OPTION => ", "36"));
 
@@ -183,11 +189,7 @@
     console.log(color("[Waiting for login...]", "37"));
     _0x2cf4fd();
 
-    process.on('SIGINT', () => {
-      console.log(color("\n[!] Shutting down...", "33"));
-      _0x41d8de.close();
-      process.exit(0);
-    });
+    process.on('exit', () => {});
   } catch (error) {
     console.error("Error in script: ", error);
   }
