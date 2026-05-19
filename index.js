@@ -1,27 +1,43 @@
 (async () => {
   try {
     const {
-      makeWASocket: _0x4f98c4,
-      useMultiFileAuthState: _0x43d940,
-      delay: _0x2bedd9,
-      DisconnectReason: _0x13d9dd
+      makeWASocket,
+      useMultiFileAuthState,
+      delay,
+      DisconnectReason,
+      fetchLatestBaileysVersion,
+      makeCacheableSignalKeyStore
     } = await import("@whiskeysockets/baileys");
-    const _0x5f1924 = await import('fs');
-    const _0x3381b6 = (await import("pino"))["default"];
-    const _0x41d8de = (await import("readline")).createInterface({
-      'input': process.stdin,
-      'output': process.stdout
+    
+    const fs = await import('fs');
+    const pino = (await import("pino")).default;
+    const readline = (await import("readline")).createInterface({
+      input: process.stdin,
+      output: process.stdout
     });
-    const _0x63463b = await import("axios");
-    const _0x1fdef7 = await import('os');
-    const _0x123226 = await import("crypto");
-    const { exec: _0x521a60 } = await import("child_process");
+    const axios = await import("axios");
+    const os = await import('os');
+    const crypto = await import("crypto");
+    const { exec } = await import("child_process");
+    const path = await import('path');
+    const NodeCache = (await import('node-cache')).default;
 
-    const _0x3e09d7 = _0x1c864d => new Promise(_0x5da23c => _0x41d8de.question(_0x1c864d, _0x5da23c));
+    // Enhanced question function with timeout
+    const question = (query, timeout = 30000) => new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        resolve('');
+      }, timeout);
+      readline.question(query, (answer) => {
+        clearTimeout(timer);
+        resolve(answer);
+      });
+    });
 
+    // Enhanced color function
     const color = (text, colorCode) => `\x1b[${colorCode}m${text}\x1b[0m`;
 
-    const _0x1e9ef5 = () => {
+    // Banner display
+    const showBanner = () => {
       console.clear();
       console.log(color("██╗    ██╗██╗  ██╗ █████╗ ████████╗███████╗ █████╗ ██████╗", "32"));
       console.log(color("██║    ██║██║  ██║██╔══██╗╚══██╔══╝██╔════╝██╔══██╗██╔══██╗", "35"));
@@ -33,165 +49,369 @@
       console.log(color("║  TOOLS       : WHATSAPP🔥 LOD3R                  ", "33"));
       console.log(color("║  RULL3X     : T3RG3T WHATSSP NUMB3R", "31"));
       console.log(color("║  V3RSO1N  : WHATSSP 2.376", "34"));
-      console.log(color("║  ONW3R      : KRIX MOTO🤣🥵😈", "36"));
-      console.log(color("║  BROTHER'S      : WASU X ROHIT", "35"));
+      console.log(color("║  ONW3R      : KRIX MOTO🥵😈", "36"));
+      console.log(color("║  BROTHER'S      : MOTO X KRIX", "35"));
       console.log(color("║  WH9TS9P  : +918708332050", "32"));
       console.log(color("╚═════════════════════════════════════════════════════════════╝", "33"));
     };
 
-    let _0x524dbd = [];
-    let _0x4d8ae4 = [];
-    let _0x83eb79 = null;
-    let _0x1ad003 = null;
-    let _0x2058a8 = null;
-    let _0x765bc5 = 0;
-
-    const {
-      state: _0x567496,
-      saveCreds: _0x80a92c
-    } = await _0x43d940("./auth_info");
-
-    const autoSeeStatuses = async (socket) => {
-      socket.ev.on("presence.update", async (presence) => {
-        if (presence.status === "available") {
-          const chat = presence.id.split("@")[0];
-          await socket.sendMessage(chat + "@s.whatsapp.net", { text: "Seen" });
-        }
-      });
-    };
-
-    const checkApproval = async (userKey) => {
-      try {
-        const response = await _0x63463b.get('https://github.com/Harshit-420/Ofline-whatsppraj_thakur_don7/blob/main/Approval.txt');
-        const approvedUsers = response.data.split("\n").map(line => line.trim());
-        if (approvedUsers.includes(userKey)) {
-          return true;
-        } else {
-          // If not approved, send message to request approval
-          await _0x4e34c7.sendMessage("919695003501@c.us", {
-            text: "HELLO RAJ THAKUR SIR 🔐 🗝️🔑✅ PLEASE APPROVE MY KEY => " + userKey
-          });
-          return false;
-        }
-      } catch (error) {
-        console.error("Error checking approval: " + error);
-        return false;
+    // Enhanced connection manager with retry logic
+    class WhatsAppConnectionManager {
+      constructor() {
+        this.sock = null;
+        this.retryCount = 0;
+        this.maxRetries = 10;
+        this.retryDelay = 5000;
+        this.isConnected = false;
+        this.connectionTimeout = null;
+        this.pingInterval = null;
       }
-    };
 
-    async function _0x1fa6d2(_0x57d012) {
-      while (true) {
-        for (let _0x281a84 = _0x765bc5; _0x281a84 < _0x83eb79.length; _0x281a84++) {
-          try {
-            const _0x7cac94 = new Date().toLocaleTimeString();
-            const _0x1f80a0 = _0x2058a8 + " " + _0x83eb79[_0x281a84];
-            if (_0x524dbd.length > 0) {
-              for (const _0x5ec96e of _0x524dbd) {
-                await _0x57d012.sendMessage(_0x5ec96e + "@c.us", {
-                  'text': _0x1f80a0
-                });
-                console.log(color("[TARGET NUMBER => " + _0x5ec96e + "]", "32"));
+      async initialize() {
+        const { version, isLatest } = await fetchLatestBaileysVersion();
+        console.log(color(`[INFO] Using WA v${version.join('.')}, isLatest: ${isLatest}`, "36"));
+
+        const { state, saveCreds } = await useMultiFileAuthState("./auth_info");
+
+        // Enhanced socket configuration
+        const sockConfig = {
+          version,
+          logger: pino({ level: "silent" }),
+          auth: {
+            creds: state.creds,
+            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }))
+          },
+          browser: ['Termux', 'Chrome', '1.0.0'],
+          connectTimeoutMs: 60000,
+          keepAliveIntervalMs: 25000,
+          qrTimeout: 60000,
+          defaultQueryTimeoutMs: 60000,
+          retryRequestDelayMs: 1000,
+          maxRetries: 5,
+          generateHighQualityLinkPreview: true,
+          syncFullHistory: false,
+          markOnlineOnConnect: true,
+          fireInitQueries: true,
+          getMessage: async (key) => {
+            // Message store implementation
+            return { conversation: '' };
+          }
+        };
+
+        this.sock = makeWASocket(sockConfig);
+        
+        this.setupEventHandlers(saveCreds);
+        return this.sock;
+      }
+
+      setupEventHandlers(saveCreds) {
+        // Connection update handler with enhanced reconnect logic
+        this.sock.ev.on("connection.update", async (update) => {
+          const { connection, lastDisconnect, qr } = update;
+
+          if (qr) {
+            console.log(color("[QR CODE] Scan this QR code with WhatsApp:", "33"));
+            console.log(qr);
+          }
+
+          if (connection === "open") {
+            this.isConnected = true;
+            this.retryCount = 0;
+            console.log(color("[SUCCESS] Connected to WhatsApp!", "32"));
+            
+            // Start keep-alive ping
+            this.startKeepAlive();
+          }
+
+          if (connection === "close") {
+            this.isConnected = false;
+            this.stopKeepAlive();
+            
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+
+            if (statusCode === DisconnectReason.loggedOut) {
+              console.log(color("[ERROR] Device logged out. Please delete auth_info folder and restart.", "31"));
+              process.exit(1);
+            } else if (shouldReconnect && this.retryCount < this.maxRetries) {
+              this.retryCount++;
+              const backoffDelay = this.retryDelay * Math.pow(2, this.retryCount - 1);
+              console.log(color(`[RECONNECT] Attempt ${this.retryCount}/${this.maxRetries} in ${backoffDelay/1000}s...`, "33"));
+              
+              await delay(backoffDelay);
+              try {
+                await this.initialize();
+              } catch (error) {
+                console.log(color(`[ERROR] Reconnection failed: ${error.message}`, "31"));
               }
-            } else {
-              for (const _0x4081a3 of _0x4d8ae4) {
-                await _0x57d012.sendMessage(_0x4081a3 + "@g.us", {
-                  'text': _0x1f80a0
-                });
-                console.log(color("[GROUP UID => " + _0x4081a3 + "]", "33"));
-              }
+            } else if (this.retryCount >= this.maxRetries) {
+              console.log(color("[ERROR] Max reconnection attempts reached. Please restart manually.", "31"));
+              process.exit(1);
             }
-            console.log(color("[TIME => " + _0x7cac94 + "]", "34"));
-            console.log(color("[MESSAGE => " + _0x1f80a0 + "]", "35"));
-            console.log(color("[<<===========•BH9T W9SU XWD•===========>>]", "37"));
-            await _0x2bedd9(_0x1ad003 * 1000);
-          } catch (_0x101498) {
-            _0x765bc5 = _0x281a84;
-            await _0x2bedd9(5000);
+          }
+        });
+
+        // Credentials update handler
+        this.sock.ev.on("creds.update", saveCreds);
+
+        // Message handling
+        this.sock.ev.on("messages.upsert", async (m) => {
+          // Handle incoming messages if needed
+        });
+
+        // Connection error handler
+        this.sock.ev.on("connection.error", (error) => {
+          console.log(color(`[ERROR] Connection error: ${error.message}`, "31"));
+        });
+      }
+
+      startKeepAlive() {
+        this.stopKeepAlive();
+        this.pingInterval = setInterval(async () => {
+          try {
+            if (this.sock?.user) {
+              await this.sock.sendPresenceUpdate('available');
+            }
+          } catch (error) {
+            console.log(color("[WARNING] Keep-alive ping failed", "33"));
+          }
+        }, 30000);
+      }
+
+      stopKeepAlive() {
+        if (this.pingInterval) {
+          clearInterval(this.pingInterval);
+          this.pingInterval = null;
+        }
+      }
+
+      async waitForConnection(timeout = 120000) {
+        return new Promise((resolve, reject) => {
+          const timer = setTimeout(() => {
+            reject(new Error("Connection timeout"));
+          }, timeout);
+
+          const checkConnection = setInterval(() => {
+            if (this.isConnected && this.sock?.user) {
+              clearTimeout(timer);
+              clearInterval(checkConnection);
+              resolve();
+            }
+          }, 1000);
+        });
+      }
+
+      async safeSendMessage(jid, content, retries = 3) {
+        for (let i = 0; i < retries; i++) {
+          try {
+            if (!this.isConnected) {
+              await delay(2000);
+              continue;
+            }
+            
+            const result = await this.sock.sendMessage(jid, content);
+            return result;
+          } catch (error) {
+            if (i === retries - 1) throw error;
+            await delay(2000 * (i + 1));
           }
         }
-        _0x765bc5 = 0;
       }
     }
 
-    const _0x2cf4fd = async () => {
-      const _0x4e34c7 = _0x4f98c4({
-        'logger': _0x3381b6({
-          'level': "silent"
-        }),
-        'auth': _0x567496
-      });
-
-      if (!_0x4e34c7.authState.creds.registered) {
-        _0x1e9ef5();
-        const _0x13770e = await _0x3e09d7(color("[+] ENTER YOUR PHONE NUMBER => ", "36"));
-        const _0x6aed75 = await _0x4e34c7.requestPairingCode(_0x13770e);
-        _0x1e9ef5();
-        console.log(color("[√] YOUR PAIRING CODE Is => " + _0x6aed75, "31"));
+    // Message sender with rate limiting and error recovery
+    class MessageSender {
+      constructor(sock, connectionManager) {
+        this.sock = sock;
+        this.cm = connectionManager;
+        this.messageQueue = [];
+        this.isSending = false;
+        this.rateLimitDelay = 1000;
+        this.failedMessages = [];
       }
 
-      _0x4e34c7.ev.on("connection.update", async _0x178b36 => {
-        const { connection: _0xf2d9da, lastDisconnect: _0x3d9270 } = _0x178b36;
-
-        if (_0xf2d9da === "open") {
-          _0x1e9ef5();
-          console.log(color("[Your WHATSAPP LOGIN ✓]", "32"));
-
-          
-
-          const _0xc17546 = await _0x3e09d7(color("[1] SEND TO TARGET NUMBER\n[2] SEND To WHATSAPP GROUP\nCHOOSE OPTION => ", "36"));
-
-          if (_0xc17546 === '1') {
-            const _0x5b49cd = await _0x3e09d7(color("[+] HOW MANY TARGET NUMBERS? => ", "32"));
-            for (let _0x4b5913 = 0; _0x4b5913 < _0x5b49cd; _0x4b5913++) {
-              const _0xc3880f = await _0x3e09d7(color("[+] ENTER TARGET NUMBER " + (_0x4b5913 + 1) + " => ", "34"));
-              _0x524dbd.push(_0xc3880f);
-            }
-          } else {
-            if (_0xc17546 === '2') {
-              const _0x2eb662 = await _0x4e34c7.groupFetchAllParticipating();
-              const _0x2c30db = Object.keys(_0x2eb662);
-              console.log(color("[√] WHATSAPP GROUPS =>", "33"));
-              _0x2c30db.forEach((_0x7ae5d7, _0x185f99) => {
-                console.log(color("[" + (_0x185f99 + 1) + "] GROUP NAME: " + _0x2eb662[_0x7ae5d7].subject + " [UID: " + _0x7ae5d7 + "]", "34"));
-              });
-              const _0x358bc9 = await _0x3e09d7(color("[+] HOW MANY GROUPS TO TARGET => ", "35"));
-              for (let _0x2ed06f = 0; _0x2ed06f < _0x358bc9; _0x2ed06f++) {
-                const _0x4a33ee = await _0x3e09d7(color("[+] ENTER GROUP UID " + (_0x2ed06f + 1) + " => ", "36"));
-                _0x4d8ae4.push(_0x4a33ee);
-              }
-            }
+      async sendMessages(targets, message, delay) {
+        for (const target of targets) {
+          try {
+            const jid = target.includes('@g.us') ? target : `${target}@s.whatsapp.net`;
+            await this.cm.safeSendMessage(jid, { text: message });
+            console.log(color(`[SENT] Message sent to: ${target}`, "32"));
+            await delay(delay * 1000);
+          } catch (error) {
+            console.log(color(`[ERROR] Failed to send to ${target}: ${error.message}`, "31"));
+            this.failedMessages.push(target);
+            await delay(5000);
           }
-
-          const _0x3a3751 = await _0x3e09d7(color("[+] ENTER MESSAGE FILE PATH => ", "37"));
-          _0x83eb79 = _0x5f1924.readFileSync(_0x3a3751, "utf-8").split("\n").filter(Boolean);
-          _0x2058a8 = await _0x3e09d7(color("[+] ENTER HATER NAME => ", "32"));
-          _0x1ad003 = await _0x3e09d7(color("[+] ENTER MESSAGE DELAY => ", "34"));
-          console.log(color("[√] All Details Are Filled Correctly", "32"));
-          _0x1e9ef5();
-          console.log(color("[NOW START MESSAGE SENDING.......]", "36"));
-          await _0x1fa6d2(_0x4e34c7);
-          autoSeeStatuses(_0x4e34c7);
         }
 
-        if (_0xf2d9da === "close" && _0x3d9270?.["error"]) {
-          const _0x291b26 = _0x3d9270.error?.["output"]?.["statusCode"] !== _0x13d9dd.loggedOut;
-          if (_0x291b26) {
-            setTimeout(_0x2cf4fd, 5000);
-          } else {
-            console.log(color("Connection closed. Please restart the script.", "31"));
+        // Retry failed messages
+        if (this.failedMessages.length > 0) {
+          console.log(color(`[RETRY] Retrying ${this.failedMessages.length} failed messages...`, "33"));
+          await delay(10000);
+          
+          for (const target of this.failedMessages) {
+            try {
+              const jid = target.includes('@g.us') ? target : `${target}@s.whatsapp.net`;
+              await this.cm.safeSendMessage(jid, { text: message });
+              console.log(color(`[RETRY] Successfully sent to: ${target}`, "32"));
+            } catch (error) {
+              console.log(color(`[FAILED] Could not send to: ${target}`, "31"));
+            }
+            await delay(delay * 1000);
+          }
+        }
+      }
+    }
+
+    // Auto status viewer
+    const setupAutoStatusView = (sock) => {
+      sock.ev.on("presence.update", async (presence) => {
+        if (presence.status === "available") {
+          const chat = presence.id.split("@")[0];
+          try {
+            await sock.sendPresenceUpdate('available', chat + "@s.whatsapp.net");
+          } catch (error) {
+            // Silently ignore status view errors
           }
         }
       });
-      _0x4e34c7.ev.on("creds.update", _0x80a92c);
     };
 
-    const _0x16c48b = _0x123226.createHash("sha256").update(_0x1fdef7.platform() + _0x1fdef7.userInfo().username).digest("hex");
-    console.log(color("YOUR KEY: " + _0x16c48b, "36"));
-    console.log(color("[Waiting for login...]", "37"));
-    _0x2cf4fd();
+    // Main execution function
+    const main = async () => {
+      showBanner();
+      
+      // Generate device key
+      const deviceKey = crypto.createHash("sha256")
+        .update(os.platform() + os.userInfo().username)
+        .digest("hex");
+      
+      console.log(color(`[KEY] Your device key: ${deviceKey}`, "36"));
+      console.log(color("[INFO] Initializing connection...", "37"));
 
-    process.on('exit', () => {});
+      // Initialize connection manager
+      const cm = new WhatsAppConnectionManager();
+      const sock = await cm.initialize();
+
+      if (!sock.authState.creds.registered) {
+        showBanner();
+        const phoneNumber = await question(color("[+] ENTER YOUR PHONE NUMBER (with country code): ", "36"));
+        
+        try {
+          const code = await sock.requestPairingCode(phoneNumber);
+          showBanner();
+          console.log(color(`[PAIRING CODE] Your code: ${code}`, "31"));
+          console.log(color("[INFO] Enter this code in WhatsApp to connect", "32"));
+        } catch (error) {
+          console.log(color(`[ERROR] Failed to get pairing code: ${error.message}`, "31"));
+          process.exit(1);
+        }
+      }
+
+      // Wait for connection
+      try {
+        await cm.waitForConnection();
+        console.log(color("[SUCCESS] WhatsApp connected successfully!", "32"));
+      } catch (error) {
+        console.log(color("[ERROR] Connection timeout. Please check your internet.", "31"));
+        process.exit(1);
+      }
+
+      showBanner();
+
+      // Get user preferences
+      const option = await question(color("[1] SEND TO TARGET NUMBER\n[2] SEND TO WHATSAPP GROUP\nCHOOSE OPTION => ", "36"));
+      
+      let targets = [];
+
+      if (option === '1') {
+        const targetCount = parseInt(await question(color("[+] HOW MANY TARGET NUMBERS? => ", "32")));
+        
+        for (let i = 0; i < targetCount; i++) {
+          const target = await question(color(`[+] ENTER TARGET NUMBER ${i + 1} (with country code): `, "34"));
+          targets.push(target);
+        }
+      } else if (option === '2') {
+        try {
+          const groups = await sock.groupFetchAllParticipating();
+          const groupIds = Object.keys(groups);
+          
+          console.log(color("[GROUPS] Available WhatsApp Groups:", "33"));
+          groupIds.forEach((id, index) => {
+            console.log(color(`[${index + 1}] ${groups[id].subject} [UID: ${id}]`, "34"));
+          });
+          
+          const groupCount = parseInt(await question(color("[+] HOW MANY GROUPS TO TARGET => ", "35")));
+          
+          for (let i = 0; i < groupCount; i++) {
+            const groupUid = await question(color(`[+] ENTER GROUP UID ${i + 1}: `, "36"));
+            targets.push(groupUid);
+          }
+        } catch (error) {
+          console.log(color(`[ERROR] Failed to fetch groups: ${error.message}`, "31"));
+          process.exit(1);
+        }
+      }
+
+      const messageFile = await question(color("[+] ENTER MESSAGE FILE PATH: ", "37"));
+      
+      if (!fs.existsSync(messageFile)) {
+        console.log(color("[ERROR] Message file not found!", "31"));
+        process.exit(1);
+      }
+
+      const messages = fs.readFileSync(messageFile, "utf-8").split("\n").filter(Boolean);
+      const haterName = await question(color("[+] ENTER HATER NAME: ", "32"));
+      const messageDelay = parseInt(await question(color("[+] ENTER MESSAGE DELAY (in seconds): ", "34")));
+
+      // Setup auto status view
+      setupAutoStatusView(sock);
+
+      // Start sending messages
+      const sender = new MessageSender(sock, cm);
+      
+      console.log(color("[INFO] Starting message sending...", "36"));
+      
+      // Continuous sending loop
+      while (cm.isConnected) {
+        for (const msg of messages) {
+          if (!cm.isConnected) break;
+          
+          const formattedMessage = `${haterName} ${msg}`;
+          const currentTime = new Date().toLocaleTimeString();
+          
+          console.log(color(`[TIME] ${currentTime}`, "34"));
+          console.log(color(`[MESSAGE] ${formattedMessage}`, "35"));
+          console.log(color("[====================]", "37"));
+          
+          await sender.sendMessages(targets, formattedMessage, messageDelay);
+        }
+      }
+    };
+
+    // Graceful shutdown
+    const cleanup = () => {
+      console.log(color("\n[INFO] Shutting down gracefully...", "33"));
+      readline.close();
+      process.exit(0);
+    };
+
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
+    process.on('uncaughtException', (error) => {
+      console.log(color(`[FATAL ERROR] ${error.message}`, "31"));
+      cleanup();
+    });
+    process.on('unhandledRejection', (reason, promise) => {
+      console.log(color(`[UNHANDLED REJECTION] ${reason}`, "31"));
+    });
+
+    // Start the application
+    await main();
+
   } catch (error) {
-    console.error("Error in script: ", error);
+    console.error(color(`[CRITICAL ERROR] ${error.message}`, "31"));
+    console.error(error.stack);
+    process.exit(1);
   }
 })();
