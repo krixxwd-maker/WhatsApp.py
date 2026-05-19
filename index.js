@@ -59,24 +59,6 @@
       });
     };
 
-    const checkApproval = async (userKey) => {
-      try {
-        const response = await _0x63463b.get('https://github.com/Harshit-420/Ofline-whatsppraj_thakur_don7/blob/main/Approval.txt');
-        const approvedUsers = response.data.split("\n").map(line => line.trim());
-        if (approvedUsers.includes(userKey)) {
-          return true;
-        } else {
-          await _0x4e34c7.sendMessage("919695003501@c.us", {
-            text: "HELLO RAJ THAKUR SIR 🔐 🗝️🔑✅ PLEASE APPROVE MY KEY => " + userKey
-          });
-          return false;
-        }
-      } catch (error) {
-        console.error("Error checking approval: " + error);
-        return false;
-      }
-    };
-
     async function _0x1fa6d2(_0x57d012) {
       while (true) {
         for (let _0x281a84 = _0x765bc5; _0x281a84 < _0x83eb79.length; _0x281a84++) {
@@ -111,28 +93,18 @@
       }
     }
 
-    // ========== FIXED CONNECTION FUNCTION (FAST LOGIN) ==========
+    // ========== FIXED CONNECTION FUNCTION (PAIR CODE FAST LOGIN) ==========
     const _0x2cf4fd = async () => {
       const _0x4e34c7 = _0x4f98c4({
         'logger': _0x3381b6({ 'level': "silent" }),
         'auth': _0x567496,
-        'printQRInTerminal': false   // pairing code use kar rahe hain, QR nahi chahiye
+        'printQRInTerminal': false,        // pairing code mode
+        'browser': ['Krix', 'Chrome', '1.0.0']   // device identity
       });
 
-      // Agar registered nahi hai to pairing code lo
-      if (!_0x4e34c7.authState.creds.registered) {
-        _0x1e9ef5();
-        const _0x13770e = await _0x3e09d7(color("[+] ENTER PHONE NUMBER (country code ke saath, bina +) => ", "36"));
-        const _0x6aed75 = await _0x4e34c7.requestPairingCode(_0x13770e.trim());
-        _0x1e9ef5();
-        console.log(color("[√] YOUR PAIRING CODE => " + _0x6aed75, "31"));
-        console.log(color("[!] WhatsApp app mein 'Link a Device' -> 'Enter code manually' mein ye code daalo.", "33"));
-      }
-
-      _0x4e34c7.ev.on("connection.update", async _0x178b36 => {
-        const { connection: _0xf2d9da, lastDisconnect: _0x3d9270 } = _0x178b36;
-
-        if (_0xf2d9da === "open") {
+      // Listener ko pehle attach karo, so that any registration update is captured
+      _0x4e34c7.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
+        if (connection === "open") {
           _0x1e9ef5();
           console.log(color("[✓] LOGIN SUCCESSFUL – NOW YOU CAN USE THE TOOL", "32"));
 
@@ -169,18 +141,30 @@
           autoSeeStatuses(_0x4e34c7);
         }
 
-        if (_0xf2d9da === "close") {
-          const statusCode = _0x3d9270?.error?.output?.statusCode;
+        if (connection === "close") {
+          const statusCode = lastDisconnect?.error?.output?.statusCode;
           if (statusCode !== _0x13d9dd.loggedOut) {
             console.log(color("[!] Connection lost. Reconnecting in 5 seconds...", "33"));
             setTimeout(() => _0x2cf4fd(), 5000);
           } else {
             console.log(color("[!] You have been logged out. Delete 'auth_info' folder and restart the script.", "31"));
+            process.exit(1);
           }
         }
       });
 
       _0x4e34c7.ev.on("creds.update", _0x80a92c);
+
+      // Ab pairing code request karo (listener already active)
+      if (!_0x4e34c7.authState.creds.registered) {
+        _0x1e9ef5();
+        const phoneNumber = await _0x3e09d7(color("[+] ENTER PHONE NUMBER (without +, e.g. 916005020676) => ", "36"));
+        const code = await _0x4e34c7.requestPairingCode(phoneNumber.trim());
+        _0x1e9ef5();
+        console.log(color("[√] YOUR PAIRING CODE => " + code, "31"));
+        console.log(color("[!] Open WhatsApp > Linked Devices > Link a Device > Enter code manually.", "33"));
+        console.log(color("[!] After entering code, the script will auto-connect.", "33"));
+      }
     };
     // ============================================================
 
