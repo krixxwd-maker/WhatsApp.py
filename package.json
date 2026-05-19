@@ -1,9 +1,0 @@
-{
-  "type": "module",
-  "name": "whatsapp-bomber",
-  "version": "7.0.0",
-  "main": "bot.js",
-  "scripts": {
-    "start": "node bot.js"
-  }
-}
