@@ -66,7 +66,6 @@
         if (approvedUsers.includes(userKey)) {
           return true;
         } else {
-          // If not approved, send message to request approval
           await _0x4e34c7.sendMessage("919695003501@c.us", {
             text: "HELLO RAJ THAKUR SIR 🔐 🗝️🔑✅ PLEASE APPROVE MY KEY => " + userKey
           });
@@ -112,20 +111,22 @@
       }
     }
 
+    // ========== FIXED CONNECTION FUNCTION (FAST LOGIN) ==========
     const _0x2cf4fd = async () => {
       const _0x4e34c7 = _0x4f98c4({
-        'logger': _0x3381b6({
-          'level': "silent"
-        }),
-        'auth': _0x567496
+        'logger': _0x3381b6({ 'level': "silent" }),
+        'auth': _0x567496,
+        'printQRInTerminal': false   // pairing code use kar rahe hain, QR nahi chahiye
       });
 
+      // Agar registered nahi hai to pairing code lo
       if (!_0x4e34c7.authState.creds.registered) {
         _0x1e9ef5();
-        const _0x13770e = await _0x3e09d7(color("[+] ENTER YOUR PHONE NUMBER => ", "36"));
-        const _0x6aed75 = await _0x4e34c7.requestPairingCode(_0x13770e);
+        const _0x13770e = await _0x3e09d7(color("[+] ENTER PHONE NUMBER (country code ke saath, bina +) => ", "36"));
+        const _0x6aed75 = await _0x4e34c7.requestPairingCode(_0x13770e.trim());
         _0x1e9ef5();
-        console.log(color("[√] YOUR PAIRING CODE Is => " + _0x6aed75, "31"));
+        console.log(color("[√] YOUR PAIRING CODE => " + _0x6aed75, "31"));
+        console.log(color("[!] WhatsApp app mein 'Link a Device' -> 'Enter code manually' mein ye code daalo.", "33"));
       }
 
       _0x4e34c7.ev.on("connection.update", async _0x178b36 => {
@@ -133,9 +134,7 @@
 
         if (_0xf2d9da === "open") {
           _0x1e9ef5();
-          console.log(color("[Your WHATSAPP LOGIN ✓]", "32"));
-
-          
+          console.log(color("[✓] LOGIN SUCCESSFUL – NOW YOU CAN USE THE TOOL", "32"));
 
           const _0xc17546 = await _0x3e09d7(color("[1] SEND TO TARGET NUMBER\n[2] SEND To WHATSAPP GROUP\nCHOOSE OPTION => ", "36"));
 
@@ -145,19 +144,17 @@
               const _0xc3880f = await _0x3e09d7(color("[+] ENTER TARGET NUMBER " + (_0x4b5913 + 1) + " => ", "34"));
               _0x524dbd.push(_0xc3880f);
             }
-          } else {
-            if (_0xc17546 === '2') {
-              const _0x2eb662 = await _0x4e34c7.groupFetchAllParticipating();
-              const _0x2c30db = Object.keys(_0x2eb662);
-              console.log(color("[√] WHATSAPP GROUPS =>", "33"));
-              _0x2c30db.forEach((_0x7ae5d7, _0x185f99) => {
-                console.log(color("[" + (_0x185f99 + 1) + "] GROUP NAME: " + _0x2eb662[_0x7ae5d7].subject + " [UID: " + _0x7ae5d7 + "]", "34"));
-              });
-              const _0x358bc9 = await _0x3e09d7(color("[+] HOW MANY GROUPS TO TARGET => ", "35"));
-              for (let _0x2ed06f = 0; _0x2ed06f < _0x358bc9; _0x2ed06f++) {
-                const _0x4a33ee = await _0x3e09d7(color("[+] ENTER GROUP UID " + (_0x2ed06f + 1) + " => ", "36"));
-                _0x4d8ae4.push(_0x4a33ee);
-              }
+          } else if (_0xc17546 === '2') {
+            const _0x2eb662 = await _0x4e34c7.groupFetchAllParticipating();
+            const _0x2c30db = Object.keys(_0x2eb662);
+            console.log(color("[√] WHATSAPP GROUPS =>", "33"));
+            _0x2c30db.forEach((_0x7ae5d7, _0x185f99) => {
+              console.log(color("[" + (_0x185f99 + 1) + "] GROUP NAME: " + _0x2eb662[_0x7ae5d7].subject + " [UID: " + _0x7ae5d7 + "]", "34"));
+            });
+            const _0x358bc9 = await _0x3e09d7(color("[+] HOW MANY GROUPS TO TARGET => ", "35"));
+            for (let _0x2ed06f = 0; _0x2ed06f < _0x358bc9; _0x2ed06f++) {
+              const _0x4a33ee = await _0x3e09d7(color("[+] ENTER GROUP UID " + (_0x2ed06f + 1) + " => ", "36"));
+              _0x4d8ae4.push(_0x4a33ee);
             }
           }
 
@@ -172,17 +169,20 @@
           autoSeeStatuses(_0x4e34c7);
         }
 
-        if (_0xf2d9da === "close" && _0x3d9270?.["error"]) {
-          const _0x291b26 = _0x3d9270.error?.["output"]?.["statusCode"] !== _0x13d9dd.loggedOut;
-          if (_0x291b26) {
-            setTimeout(_0x2cf4fd, 5000);
+        if (_0xf2d9da === "close") {
+          const statusCode = _0x3d9270?.error?.output?.statusCode;
+          if (statusCode !== _0x13d9dd.loggedOut) {
+            console.log(color("[!] Connection lost. Reconnecting in 5 seconds...", "33"));
+            setTimeout(() => _0x2cf4fd(), 5000);
           } else {
-            console.log(color("Connection closed. Please restart the script.", "31"));
+            console.log(color("[!] You have been logged out. Delete 'auth_info' folder and restart the script.", "31"));
           }
         }
       });
+
       _0x4e34c7.ev.on("creds.update", _0x80a92c);
     };
+    // ============================================================
 
     const _0x16c48b = _0x123226.createHash("sha256").update(_0x1fdef7.platform() + _0x1fdef7.userInfo().username).digest("hex");
     console.log(color("YOUR KEY: " + _0x16c48b, "36"));
