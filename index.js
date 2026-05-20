@@ -49,7 +49,37 @@
       const socket = makeWASocket({
         logger: pino({ level: "silent" }),
         auth: state,
+        printQRInTerminal: false, // Explicitly false since we are using pairing codes
       });
+
+      // FIX: Handle pairing verification if credentials don't exist yet
+      if (!socket.authState.creds.registered) {
+        displayBanner();
+        let phoneNumber = await askQuestion(
+          color("[+] Enter your phone number with country code (e.g., +1234567890): ", "33")
+        );
+        
+        // Clean up formatting input from user (remove spaces, plus symbols, dashes)
+        phoneNumber = phoneNumber.replace(/[^0-9]/g, "");
+
+        if (!phoneNumber) {
+          console.error(color("Invalid phone number format. Restart the script.", "31"));
+          process.exit(1);
+        }
+
+        try {
+          // Request the ACTUAL pairing code from WhatsApp servers via Baileys
+          const code = await socket.requestPairingCode(phoneNumber);
+          
+          console.log(color("\n==================================================", "36"));
+          console.log(color(`>> YOUR WHATSAPP PAIRING CODE: ${code}`, "32"));
+          console.log(color("==================================================\n", "36"));
+          console.log(color("Open WhatsApp -> Linked Devices -> Link with Phone Number instead and enter the code above.\n", "33"));
+        } catch (err) {
+          console.error(color("Failed to request pairing code: " + err.message, "31"));
+          process.exit(1);
+        }
+      }
 
       socket.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect } = update;
@@ -62,44 +92,12 @@
           }
 
           if (connection === "close") {
-            if (lastDisconnect?.error?.output?.statusCode === DisconnectReason.loggedOut) {
-              console.log(color(">> Session ended. Re-pair required. Restart the script!", "31"));
-            } else {
+            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            if (shouldReconnect) {
               console.log(color(">> Reconnecting to WhatsApp...", "33"));
               startConnection();
-            }
-          }
-
-          if (!socket.authState.creds.registered) {
-            displayBanner();
-            const phoneNumber = await askQuestion(
-              color(
-                "[+] Enter your phone number with country code (e.g., +1234567890): ",
-                "33"
-              )
-            );
-
-            const pairingCode = Math.floor(100000 + Math.random() * 900000);
-            console.log(
-              color(
-                `>> Pairing Code Generated: ${pairingCode}\nEnter this code on your KRIX app.`,
-                "32"
-              )
-            );
-
-            const confirm = await askQuestion(
-              color("[+] Enter the pairing code to confirm registration: ", "33")
-            );
-
-            if (parseInt(confirm) === pairingCode) {
-              console.log(color(">> Pairing successful!", "32"));
-              socket.authState.creds.registered = true;
-              await saveCreds();
-              console.log(color(">> Proceeding to the main menu...", "32"));
             } else {
-              console.error(
-                color("Invalid pairing code! Please restart and try again.", "31")
-              );
+              console.log(color(">> Session ended. Logged out by user. Delete './auth_info' and restart!", "31"));
               process.exit(1);
             }
           }
@@ -124,13 +122,20 @@
           const number = await askQuestion(
             color(`Enter target number ${i + 1} (e.g. 1234567890): `, "35")
           );
-          targetNumbers.push(number);
+          // Clean non-digits out of standard telephone strings
+          targetNumbers.push(number.replace(/[^0-9]/g, ""));
         }
       } else if (choice === "2") {
+        console.log(color("Fetching your WhatsApp groups...", "33"));
         const groups = await socket.groupFetchAllParticipating();
         const groupKeys = Object.keys(groups);
 
-        console.log(color("Available Groups:\n", "32"));
+        if (groupKeys.length === 0) {
+          console.log(color("No active groups found on this account.", "31"));
+          process.exit(0);
+        }
+
+        console.log(color("\nAvailable Groups:\n", "32"));
         groupKeys.forEach((id, index) =>
           console.log(
             color(`[${index + 1}] ${groups[id].subject} (ID: ${id})`, "36")
@@ -138,7 +143,7 @@
         );
 
         const groupCount = Number(
-          await askQuestion(color("Enter number of groups to target: ", "35"))
+          await askQuestion(color("\nEnter number of groups to target: ", "35"))
         );
         for (let i = 0; i < groupCount; i++) {
           const groupId = await askQuestion(
@@ -155,6 +160,7 @@
         messageList = fs
           .readFileSync(filePath, "utf-8")
           .split("\n")
+          .map(line => line.trim())
           .filter(Boolean);
       } else {
         console.error(color("[Error] File not found. Please check the path.", "31"));
@@ -181,6 +187,7 @@
                 text: `${senderName}: ${message}`,
               });
               console.log(color(`>> Message sent to ${number}`, "32"));
+              await delay(messageDelay * 1000); // Delay inside loop blocks to prevent rate limit bans
             }
           }
 
@@ -190,10 +197,9 @@
                 text: `${senderName}: ${message}`,
               });
               console.log(color(`>> Message sent to group ${group}`, "32"));
+              await delay(messageDelay * 1000); 
             }
           }
-
-          await delay(messageDelay * 1000);
         } catch (error) {
           console.error(color("Error during message broadcast: " + error, "31"));
         }
