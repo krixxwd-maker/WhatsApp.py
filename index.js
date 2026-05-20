@@ -7,6 +7,7 @@
       useMultiFileAuthState,
       delay,
       DisconnectReason,
+      Browsers,
     } = await import("@whiskeysockets/baileys");
     const fs = await import("fs");
     const pino = (await import("pino")).default;
@@ -42,41 +43,48 @@
     let messageList = null;
     let senderName = null;
     let messageDelay = null;
+    let isPairingRequested = false;
 
+    // Load state management
     const { state, saveCreds } = await useMultiFileAuthState("./auth_info");
 
     const startConnection = async () => {
+      // FIX 1: Provide clean Mac OS / Chrome headers so WhatsApp treats the script as a legitimate browser
       const socket = makeWASocket({
         logger: pino({ level: "silent" }),
         auth: state,
-        printQRInTerminal: false, // Explicitly false since we are using pairing codes
+        printQRInTerminal: false,
+        browser: Browsers.macOS("Chrome"),
+        syncFullHistory: false
       });
 
-      // FIX: Handle pairing verification if credentials don't exist yet
-      if (!socket.authState.creds.registered) {
+      // FIX 2: Trigger pairing before handling events so stream lifecycle runs predictably
+      if (!socket.authState.creds.registered && !isPairingRequested) {
+        isPairingRequested = true;
         displayBanner();
         let phoneNumber = await askQuestion(
           color("[+] Enter your phone number with country code (e.g., +1234567890): ", "33")
         );
         
-        // Clean up formatting input from user (remove spaces, plus symbols, dashes)
         phoneNumber = phoneNumber.replace(/[^0-9]/g, "");
-
         if (!phoneNumber) {
-          console.error(color("Invalid phone number format. Restart the script.", "31"));
+          console.error(color("Invalid phone number format. Please restart the script.", "31"));
           process.exit(1);
         }
 
+        // Delay slight execution to give socket connection an upfront breathing window
+        await delay(3000);
         try {
-          // Request the ACTUAL pairing code from WhatsApp servers via Baileys
           const code = await socket.requestPairingCode(phoneNumber);
-          
           console.log(color("\n==================================================", "36"));
           console.log(color(`>> YOUR WHATSAPP PAIRING CODE: ${code}`, "32"));
           console.log(color("==================================================\n", "36"));
-          console.log(color("Open WhatsApp -> Linked Devices -> Link with Phone Number instead and enter the code above.\n", "33"));
+          console.log(color("Go to WhatsApp -> Linked Devices -> Link with Phone Number and enter it.\n", "33"));
         } catch (err) {
-          console.error(color("Failed to request pairing code: " + err.message, "31"));
+          console.error(color("Failed to request pairing code. Resetting folder. Retry. Error: " + err.message, "31"));
+          isPairingRequested = false;
+          // Clear directory data on absolute handshake failure to prevent lock loops
+          if (fs.existsSync("./auth_info")) fs.rmSync("./auth_info", { recursive: true, force: true });
           process.exit(1);
         }
       }
@@ -92,17 +100,24 @@
           }
 
           if (connection === "close") {
-            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            
+            // FIX 3: Capture typical WhatsApp handshake drops (408/515/RestartRequired) and automatically recycle state safely
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+            
             if (shouldReconnect) {
-              console.log(color(">> Reconnecting to WhatsApp...", "33"));
+              console.log(color(`>> Connection updated (${statusCode || 'Stream Drop'}). Re-establishing pipe...`, "33"));
+              await delay(2000);
               startConnection();
             } else {
-              console.log(color(">> Session ended. Logged out by user. Delete './auth_info' and restart!", "31"));
+              console.log(color(">> Session expired or revoked. Clearing auth cache file...", "31"));
+              if (fs.existsSync("./auth_info")) fs.rmSync("./auth_info", { recursive: true, force: true });
+              console.log(color(">> Session cleaned. Please restart script to re-pair!", "32"));
               process.exit(1);
             }
           }
         } catch (err) {
-          console.error(color(">> Error during connection update: " + err.message, "31"));
+          console.error(color(">> Error during connection update pipeline: " + err.message, "31"));
         }
       });
 
@@ -122,16 +137,15 @@
           const number = await askQuestion(
             color(`Enter target number ${i + 1} (e.g. 1234567890): `, "35")
           );
-          // Clean non-digits out of standard telephone strings
           targetNumbers.push(number.replace(/[^0-9]/g, ""));
         }
       } else if (choice === "2") {
-        console.log(color("Fetching your WhatsApp groups...", "33"));
+        console.log(color("Fetching available WhatsApp groups...", "33"));
         const groups = await socket.groupFetchAllParticipating();
         const groupKeys = Object.keys(groups);
 
         if (groupKeys.length === 0) {
-          console.log(color("No active groups found on this account.", "31"));
+          console.log(color("No groups found on this account setup.", "31"));
           process.exit(0);
         }
 
@@ -163,7 +177,7 @@
           .map(line => line.trim())
           .filter(Boolean);
       } else {
-        console.error(color("[Error] File not found. Please check the path.", "31"));
+        console.error(color("[Error] File path not found.", "31"));
         process.exit(1);
       }
 
@@ -187,7 +201,7 @@
                 text: `${senderName}: ${message}`,
               });
               console.log(color(`>> Message sent to ${number}`, "32"));
-              await delay(messageDelay * 1000); // Delay inside loop blocks to prevent rate limit bans
+              await delay(messageDelay * 1000); 
             }
           }
 
@@ -201,7 +215,7 @@
             }
           }
         } catch (error) {
-          console.error(color("Error during message broadcast: " + error, "31"));
+          console.error(color("Error during message broadcast loop: " + error, "31"));
         }
       }
 
