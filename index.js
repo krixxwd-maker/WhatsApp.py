@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 (async () => {
   try {
     const {
@@ -49,7 +51,6 @@
         auth: state,
       });
 
-      // Listen for connection updates
       socket.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect } = update;
 
@@ -65,7 +66,7 @@
               console.log(color(">> Session ended. Re-pair required. Restart the script!", "31"));
             } else {
               console.log(color(">> Reconnecting to WhatsApp...", "33"));
-              startConnection(); // Attempt reconnection
+              startConnection();
             }
           }
 
@@ -78,8 +79,7 @@
               )
             );
 
-            // Simulate getting a pair code and display to the user
-            const pairingCode = Math.floor(100000 + Math.random() * 900000); // Simple random 6-digit code
+            const pairingCode = Math.floor(100000 + Math.random() * 900000);
             console.log(
               color(
                 `>> Pairing Code Generated: ${pairingCode}\nEnter this code on your KRIX app.`,
@@ -93,14 +93,14 @@
 
             if (parseInt(confirm) === pairingCode) {
               console.log(color(">> Pairing successful!", "32"));
-              socket.authState.creds.registered = true; // Mark the session as registered
-              await saveCreds(); // Persist session
+              socket.authState.creds.registered = true;
+              await saveCreds();
               console.log(color(">> Proceeding to the main menu...", "32"));
             } else {
               console.error(
                 color("Invalid pairing code! Please restart and try again.", "31")
               );
-              process.exit(1); // Exit script
+              process.exit(1);
             }
           }
         } catch (err) {
@@ -108,7 +108,6 @@
         }
       });
 
-      // Save updated credentials (persistence)
       socket.ev.on("creds.update", saveCreds);
     };
 
@@ -194,14 +193,14 @@
             }
           }
 
-          await delay(messageDelay * 1000); // Pause for the given message delay
+          await delay(messageDelay * 1000);
         } catch (error) {
           console.error(color("Error during message broadcast: " + error, "31"));
         }
       }
 
       console.log(color(">> All messages sent successfully!", "32"));
-      process.exit(0); // Exit after completing message broadcast
+      process.exit(0);
     };
 
     displayBanner();
