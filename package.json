@@ -1,0 +1,3 @@
+"bin": {
+  "whatsapp-cli": "./whatsapp-cli.js"
+}
