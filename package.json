@@ -1,3 +1,26 @@
-"bin": {
-  "whatsapp-cli": "./whatsapp-cli.js"
+{
+  "name": "krix-ultra-enterprise",
+  "version": "7.2.0",
+  "description": "Production-grade WhatsApp broadcast tool – ES Module",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --expose-gc index.js",
+    "dev": "node --expose-gc index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9",
+    "express": "^4.21.0",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^8.0.0",
+    "multer": "^1.4.5-lts.1",
+    "node-cache": "^5.1.2",
+    "p-limit": "^6.1.0",
+    "pino": "^9.5.0",
+    "pino-pretty": "^13.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
 }
